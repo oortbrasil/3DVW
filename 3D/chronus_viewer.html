@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { background:#000; width:100%; height:100%; overflow:hidden; }
+canvas { display:block; }
+#hint {
+  position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+  color:rgba(255,255,255,0.35); font-family:system-ui,sans-serif;
+  font-size:12px; letter-spacing:0.12em; text-transform:uppercase;
+  pointer-events:none;
+  animation: fadeout 3s ease forwards 4s;
+}
+@keyframes fadeout { to { opacity:0; } }
+</style>
+</head>
+<body>
+<div id="hint">Role a página para girar</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+
+// Cena
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 1000);
+camera.position.set(0, 0.5, 3);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+document.body.appendChild(renderer.domElement);
+
+// Luzes
+const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+scene.add(ambient);
+
+const key = new THREE.DirectionalLight(0xffffff, 2.0);
+key.position.set(3, 5, 3);
+scene.add(key);
+
+const fill = new THREE.DirectionalLight(0x7ecfff, 0.8);
+fill.position.set(-3, 1, -2);
+scene.add(fill);
+
+const rim = new THREE.DirectionalLight(0xc084fc, 0.5);
+rim.position.set(0, -2, -3);
+scene.add(rim);
+
+// Carregar modelo
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/');
+
+const loader = new GLTFLoader();
+loader.setDRACOLoader(dracoLoader);
+
+let model = null;
+let targetRotY = 0;
+let currentRotY = 0;
+
+loader.load(
+  'CHRONUS_PRO_FINAL.glb',
+  (gltf) => {
+    model = gltf.scene;
+
+    // Centralizar o modelo
+    const box = new THREE.Box3().setFromObject(model);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const scale = 2.0 / maxDim;
+
+    model.scale.setScalar(scale);
+    model.position.sub(center.multiplyScalar(scale));
+
+    scene.add(model);
+  },
+  (xhr) => {
+    console.log((xhr.loaded / xhr.total * 100).toFixed(0) + '% carregado');
+  },
+  (err) => {
+    console.error('Erro ao carregar modelo:', err);
+  }
+);
+
+// Rotação pelo scroll via postMessage do Velo
+window.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'wix-scroll') {
+    targetRotY += e.data.delta * 0.01;
+  }
+});
+
+// Touch direto (fallback fora do Wix)
+let lastTouchX = null;
+window.addEventListener('touchstart', (e) => { lastTouchX = e.touches[0].clientX; }, { passive: true });
+window.addEventListener('touchmove', (e) => {
+  if (lastTouchX !== null) {
+    targetRotY += (e.touches[0].clientX - lastTouchX) * 0.01;
+    lastTouchX = e.touches[0].clientX;
+  }
+}, { passive: true });
+window.addEventListener('touchend', () => { lastTouchX = null; }, { passive: true });
+
+// Mouse drag (fallback desktop)
+let dragging = false, lastMouseX = 0;
+window.addEventListener('mousedown', (e) => { dragging = true; lastMouseX = e.clientX; });
+window.addEventListener('mousemove', (e) => {
+  if (dragging) { targetRotY += (e.clientX - lastMouseX) * 0.008; lastMouseX = e.clientX; }
+});
+window.addEventListener('mouseup', () => { dragging = false; });
+
+// Resize
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// Loop
+function animate() {
+  requestAnimationFrame(animate);
+  if (model) {
+    currentRotY += (targetRotY - currentRotY) * 0.06;
+    model.rotation.y = currentRotY;
+  }
+  renderer.render(scene, camera);
+}
+animate();
+</script>
+</body>
+</html>
