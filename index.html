@@ -34,7 +34,6 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
-// Cena
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 1000);
 camera.position.set(0, 0.5, 3);
@@ -47,23 +46,18 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
 document.body.appendChild(renderer.domElement);
 
-// Luzes
 const ambient = new THREE.AmbientLight(0xffffff, 0.6);
 scene.add(ambient);
-
 const key = new THREE.DirectionalLight(0xffffff, 2.0);
 key.position.set(3, 5, 3);
 scene.add(key);
-
 const fill = new THREE.DirectionalLight(0x7ecfff, 0.8);
 fill.position.set(-3, 1, -2);
 scene.add(fill);
-
 const rim = new THREE.DirectionalLight(0xc084fc, 0.5);
 rim.position.set(0, -2, -3);
 scene.add(rim);
 
-// Carregar modelo
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/');
 
@@ -75,20 +69,16 @@ let targetRotY = 0;
 let currentRotY = 0;
 
 loader.load(
-  'oortbrasil/chronuspro3D.glb',
+  'chronuspro3D.glb',
   (gltf) => {
     model = gltf.scene;
-
-    // Centralizar o modelo
     const box = new THREE.Box3().setFromObject(model);
     const center = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
     const maxDim = Math.max(size.x, size.y, size.z);
     const scale = 2.0 / maxDim;
-
     model.scale.setScalar(scale);
     model.position.sub(center.multiplyScalar(scale));
-
     scene.add(model);
   },
   (xhr) => {
@@ -99,14 +89,12 @@ loader.load(
   }
 );
 
-// Rotação pelo scroll via postMessage do Velo
 window.addEventListener('message', (e) => {
   if (e.data && e.data.type === 'wix-scroll') {
     targetRotY += e.data.delta * 0.01;
   }
 });
 
-// Touch direto (fallback fora do Wix)
 let lastTouchX = null;
 window.addEventListener('touchstart', (e) => { lastTouchX = e.touches[0].clientX; }, { passive: true });
 window.addEventListener('touchmove', (e) => {
@@ -117,7 +105,6 @@ window.addEventListener('touchmove', (e) => {
 }, { passive: true });
 window.addEventListener('touchend', () => { lastTouchX = null; }, { passive: true });
 
-// Mouse drag (fallback desktop)
 let dragging = false, lastMouseX = 0;
 window.addEventListener('mousedown', (e) => { dragging = true; lastMouseX = e.clientX; });
 window.addEventListener('mousemove', (e) => {
@@ -125,14 +112,12 @@ window.addEventListener('mousemove', (e) => {
 });
 window.addEventListener('mouseup', () => { dragging = false; });
 
-// Resize
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// Loop
 function animate() {
   requestAnimationFrame(animate);
   if (model) {
