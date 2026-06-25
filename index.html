@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-html, body { background:#000; width:100%; height:100%; overflow:hidden; }
+html, body { background:transparent; width:100%; height:100%; overflow:hidden; }
 canvas { display:block; }
 #hint {
   position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
@@ -35,10 +35,13 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
 const scene = new THREE.Scene();
+// SEM scene.background — mantém transparente
+
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.01, 1000);
 camera.position.set(0, 0.5, 3);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setClearColor(0x000000, 0); // alpha 0 = totalmente transparente
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -60,7 +63,6 @@ scene.add(rim);
 
 const dracoLoader = new DRACOLoader();
 dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/libs/draco/');
-
 const loader = new GLTFLoader();
 loader.setDRACOLoader(dracoLoader);
 
@@ -81,20 +83,18 @@ loader.load(
     model.position.sub(center.multiplyScalar(scale));
     scene.add(model);
   },
-  (xhr) => {
-    console.log((xhr.loaded / xhr.total * 100).toFixed(0) + '% carregado');
-  },
-  (err) => {
-    console.error('Erro ao carregar modelo:', err);
-  }
+  null,
+  (err) => console.error('Erro:', err)
 );
 
+// Recebe scroll do Wix (via widget intermediário)
 window.addEventListener('message', (e) => {
   if (e.data && e.data.type === 'wix-scroll') {
     targetRotY += e.data.delta * 0.01;
   }
 });
 
+// Touch direto
 let lastTouchX = null;
 window.addEventListener('touchstart', (e) => { lastTouchX = e.touches[0].clientX; }, { passive: true });
 window.addEventListener('touchmove', (e) => {
@@ -105,6 +105,7 @@ window.addEventListener('touchmove', (e) => {
 }, { passive: true });
 window.addEventListener('touchend', () => { lastTouchX = null; }, { passive: true });
 
+// Mouse drag
 let dragging = false, lastMouseX = 0;
 window.addEventListener('mousedown', (e) => { dragging = true; lastMouseX = e.clientX; });
 window.addEventListener('mousemove', (e) => {
